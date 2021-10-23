@@ -8,19 +8,27 @@
 
       // The Browser API key obtained from the Google API Console.
       // Replace with your own Browser API key, or your own key.
+      // --- el developerkey, esto viene de la google console
       var developerKey = 'AIzaSyBUU1WhwnDDMbjKjubwSLjxZD7dbpAkpig';
 
       // The Client ID obtained from the Google API Console. Replace with your own Client ID.
+      // --- el Client ID, esto viene de la google console
       var clientId = "236585441466-q0frj09nk53vh6eot5u04b66ojnjl8sb.apps.googleusercontent.com"
 
       // Array of API discovery doc URLs for APIs used by the quickstart
+      // --- Esto viene desde la documentacion oficial y es requerido mas abajo en el api de drive
+      // --- en el api.client de drive, -- osea esto no es de picket si no de drive.
+      // --- esto es similar a un scope, verlo mas abajo
       var DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
 
       // Replace with your own project number from console.developers.google.com.
       // See "Project number" under "IAM & Admin" > "Settings"
+      // --- appid, esto viene de la google console
       var appId = "236585441466";
 
       // Scope to use to access user's Drive items.
+      // --- esto viene de la ocumentacion original y basicamente son los endpoins
+      // --- o puntos de acceso para la api a utilizar
       var scope = [
           'https://www.googleapis.com/auth/drive',
           'https://www.googleapis.com/auth/drive.file',
@@ -30,13 +38,25 @@
           'https://www.googleapis.com/auth/drive.metadata.readonly'
           ];
 
+      // --- lo inicializamos en false para luego activarlo al tener todo listo
+      // --- para abrir el picket
       var pickerApiLoaded = false;
 
+      // --- este oauthToken se optiene al realizar login con la auth2 de google
+      // --- lo comento para poder hacer el login de la app si no me recibe este oauthToken
+      // --- y no procesa el oauth cabe destacar que el mismo lo podemos enviar y recibir desde la base de datos
+      // --- para agilizar el proceso pero por ahora me choca un poco con el client de driver
+
       //var oauthToken= "ya29.a0ARrdaM_0j2ChjKxDG-TwNmlyqnN2wx6JN7esa8lKrj6P4bHOR7hU3vm5xJ15fj6ZBoxZt8j5y5S0jT7-sceq7qGfCcWsLIwCdeXa_TDFgtZm9LOwVdzpzA8_c-LJTjZ1DpVV_8ac0HelZ3nrpDI6rhx54H08";
+      
+      // -- setteamos el oauthToken como string bacio.
       
       var oauthToken= "";
 
       // Use the Google API Loader script to load the google.picker script.
+      // --- inicializamos la funcion para cargar todos los procesos, la misma es llamada desde el boton del html
+      // --- luego se desencadenan las demas funciones en procesos o colas.
+      
       function loadPicker() {
         if (oauthToken) {
           console.log("este es el token");
@@ -50,6 +70,7 @@
         }
       }
 
+      //--- aqui setteamos y autorizamos todo y retornamos un callback con el handleAuthResult
       function onAuthApiLoad() {
         window.gapi.auth.authorize(
             {
@@ -60,13 +81,17 @@
             handleAuthResult);
       }
 
+      //--- aqui setteamos la pickerApiLoaded a true (que arriba la teniamos false)
+      //--- y creamos el picket aunque todabia no cargara hasta que no pase otro cortafuegos.
       function onPickerApiLoad() {
         pickerApiLoaded = true;
         createPicker();
       }
 
+      //--- aqui recibimos por callback obteniendo el oauthToken
       function handleAuthResult(authResult) {
         if (authResult && !authResult.error) {
+          //--- aqui me robo el oauthToken para podr pasarlo a la base de datos o guardarlo como una variable.
           oauthToken = authResult.access_token;
           createPicker();
           console.log("este es el token");
@@ -75,22 +100,39 @@
       }
 
       // Create and render a Picker object for searching images.
+      //--- creamos la estructura del picker si pasa los dos cortafuegos
+      //--- 1) estar habilitado y 2) tener el token.
       function createPicker() {
         if (pickerApiLoaded && oauthToken) {
+          //--- creamos la views donde en contra de la documentacion original
+          //--- en ves de usar una funcion View usamos DocsView para poder settearlo de una mejor manera
+          //--- para poder usar setIncludeFolders (para usar carpetas) y SetOwnedByMe para leer solo
+          //--- archivos del mismo usuario, (por la cuestion de los permisos)
           var view = new google.picker.DocsView(google.picker.ViewId.DOCS)
               .setIncludeFolders(true)
               .setOwnedByMe(true);
           //view.setMimeTypes("image/png,image/jpeg,image/jpg");
+          
+          //--- comente view.setMimeTypes para poder admitir cualquier tipo de archivo
+          //--- con cualquier extencion, si quieres settearlo a solo algun tipo de archivo en especifico
+          //--- puedes hacerlo con esta funcion.
+          
+          //--- construimos el picker setteandolo con nuestros requerimientos
           var picker = new google.picker.PickerBuilder()
+          //--- comente enableFeature para poder ver la barra donde me deja hacer uppload de archivos
               //.enableFeature(google.picker.Feature.NAV_HIDDEN)
+          //--- el multiselect esta habilitado mas no setteado no e conseguido las propiedades para el mismo
+          //--- pero creo poder hacerlo, ;)
               .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
               .setAppId(appId)
               .setOAuthToken(oauthToken)
               .addView(view)
+          //--- nuevamente se settea para poder subir archivos en la vista (o algo asi | ya no recuerdo)
               .addView(new google.picker.DocsUploadView())
               .setDeveloperKey(developerKey)
               .setCallback(pickerCallback)
               .build();
+          //--- se hace visible el picker luego de que se construye todo.
            picker.setVisible(true);
         }
       };
@@ -99,6 +141,7 @@
        *  Initializes the API client library and sets up sign-in state
        *  listeners.
        */
+      //--- inicializamos el cliente de drive para poder manipular los archivos
       function initClient() {
         gapi.client.init({
           apiKey: developerKey,
@@ -106,6 +149,8 @@
           discoveryDocs: DISCOVERY_DOCS,
           scope: scope
         }).then(function () {
+         //--- nada de esto me sirve lo dejo para comparar con la documentacion original y
+         //--- buscarle alguna funcion.
           // Listen for sign-in state changes.
       //    gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
 
@@ -114,16 +159,21 @@
           //authorizeButton.onclick = handleAuthClick;
           //signoutButton.onclick = handleSignoutClick;
         }, function(error) {
+          //--- mostrar si hay algun error al conectar.
           appendPre(JSON.stringify(error, null, 2));
         });
       }
 
-      //permiso publico
-      
-
       // A simple callback implementation.
+      //--- una simple funcion de callback donde recibimos un objeto data desde el picker
+      //--- comparamos con un iff que se haya seleccionado un archivo
+      //--- y procedemos..
       function pickerCallback(data) {
         if (data.action == google.picker.Action.PICKED) {
+      //--- como te dije podemos seleccionar mas de un archivo ya que en el objeto data
+      //--- pasaremos un array de docs al cual se le puede pasar una ubicacion numerica
+      //--- como puedes observar data.docs[0] y asi con un siclo for o un foreach podemos
+      //--- ubicar todos los archivos
           var file = data.docs[0];
           var fileId = file.id;
           var folderId = file.parentId;
@@ -132,9 +182,11 @@
           var name = file.name;
           var cosa = file.get;
           
-          //asignamos permisos
+      //--- aca hacemos uso del client de drive y le asignamos permisos a la contraparte Alumno/profesor
+      //--- o profesor/alumno a travez de un correo electronico, dando solo permisos de lectura al usuario
           
           gapi.client.drive.permissions.create({
+            //--- aca le pasamos el archivo con fileid
             "fileId": fileId,
             "emailMessage": "luisarroyounesr@gmail.com",
             "enforceSingleParent": true,
@@ -144,6 +196,7 @@
             "supportsTeamDrives": true,
             "transferOwnership": false,
             "useDomainAdminAccess": false,
+            //--- aca setteamos los permisos
             "resource": {
               "role": "reader",
               "type": "user",
@@ -155,7 +208,9 @@
               },
               function(err) { console.error("Execute error", err); });
 
-          //mostramos lo demas
+
+          //--- aca mostramos lo demas por consola lo cual se puede hacer uso de ajax y pasar todos los datos del
+          //--- archivo o documento al backend al igual que el oauthToken para ser usado como querramos
           console.log("este es el id del archivo");
           console.log(fileId);
           console.log("esta es el id de la carpeta");
@@ -164,6 +219,9 @@
           console.log(thumbnails);
           console.log("esta es el archivo");
           console.log(file);
+
+          //--- aca generamos Html desde el javascript mostrando el archivo seleccionado
+          //--- como se nos de la gana.
           
           elemento = document.getElementById("elemento");
           elemento.innerHTML = '<img src="'+thumbnails+'"><a href="'+url+'" target="_blank">'+name+'</a>';
@@ -173,16 +231,20 @@
     </script>
   </head>
   <body>
-
+     <!-- --- este es el div donde agregamos el innerHtml desde el javascript-->
     <div id="elemento" class="elemento">
     </div>
     <br>
-    
+
+    <!-- --- este es el boton que llama todo -->
     <button onclick="showPickerDialog()">Show Picker Dialog</button>
 
-
     <!-- The Google API Loader script. -->
+    <!-- --- aca cargamos los scripts de la api, como veras no llamos una api especifica -->
+    <!-- --- si no la api de google en general por si requeria utilizar alguna otra funcion -->
+    <!-- --- como google analityc o algo asi (que de por si que si la use para probar cosas) -->
     <script type="text/javascript" src="https://apis.google.com/js/api.js"></script>
+    <!-- --- esta es la funcion que es llamada desde el boton -->
     <script>
     function showPickerDialog(){
         loadPicker()
