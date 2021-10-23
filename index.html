@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Google Picker</title>
+
+    <script type="text/javascript">
+
+      // The Browser API key obtained from the Google API Console.
+      // Replace with your own Browser API key, or your own key.
+      var developerKey = 'AIzaSyBUU1WhwnDDMbjKjubwSLjxZD7dbpAkpig';
+
+      // The Client ID obtained from the Google API Console. Replace with your own Client ID.
+      var clientId = "236585441466-q0frj09nk53vh6eot5u04b66ojnjl8sb.apps.googleusercontent.com"
+
+      // Array of API discovery doc URLs for APIs used by the quickstart
+      var DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
+
+      // Replace with your own project number from console.developers.google.com.
+      // See "Project number" under "IAM & Admin" > "Settings"
+      var appId = "236585441466";
+
+      // Scope to use to access user's Drive items.
+      var scope = [
+          'https://www.googleapis.com/auth/drive',
+          'https://www.googleapis.com/auth/drive.file',
+          'https://www.googleapis.com/auth/drive.appdata',
+          'https://www.googleapis.com/auth/drive.activity',
+          'https://www.googleapis.com/auth/analytics.readonly',
+          'https://www.googleapis.com/auth/drive.metadata.readonly'
+          ];
+
+      var pickerApiLoaded = false;
+
+      //var oauthToken= "ya29.a0ARrdaM_0j2ChjKxDG-TwNmlyqnN2wx6JN7esa8lKrj6P4bHOR7hU3vm5xJ15fj6ZBoxZt8j5y5S0jT7-sceq7qGfCcWsLIwCdeXa_TDFgtZm9LOwVdzpzA8_c-LJTjZ1DpVV_8ac0HelZ3nrpDI6rhx54H08";
+      
+      var oauthToken= "";
+
+      // Use the Google API Loader script to load the google.picker script.
+      function loadPicker() {
+        if (oauthToken) {
+          console.log("este es el token");
+          console.log(oauthToken);
+          gapi.load('picker', {'callback': onPickerApiLoad});
+          gapi.load('client:auth2', initClient);
+        }else{
+          gapi.load('auth', {'callback': onAuthApiLoad});
+          gapi.load('picker', {'callback': onPickerApiLoad});
+          gapi.load('client:auth2', {'callback': initClient});
+        }
+      }
+
+      function onAuthApiLoad() {
+        window.gapi.auth.authorize(
+            {
+              'client_id': clientId,
+              'scope': scope,
+              'immediate': false
+            },
+            handleAuthResult);
+      }
+
+      function onPickerApiLoad() {
+        pickerApiLoaded = true;
+        createPicker();
+      }
+
+      function handleAuthResult(authResult) {
+        if (authResult && !authResult.error) {
+          oauthToken = authResult.access_token;
+          createPicker();
+          console.log("este es el token");
+          console.log(oauthToken);
+        }
+      }
+
+      // Create and render a Picker object for searching images.
+      function createPicker() {
+        if (pickerApiLoaded && oauthToken) {
+          var view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+              .setIncludeFolders(true)
+              .setOwnedByMe(true);
+          //view.setMimeTypes("image/png,image/jpeg,image/jpg");
+          var picker = new google.picker.PickerBuilder()
+              //.enableFeature(google.picker.Feature.NAV_HIDDEN)
+              .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+              .setAppId(appId)
+              .setOAuthToken(oauthToken)
+              .addView(view)
+              .addView(new google.picker.DocsUploadView())
+              .setDeveloperKey(developerKey)
+              .setCallback(pickerCallback)
+              .build();
+           picker.setVisible(true);
+        }
+      };
+
+       /**
+       *  Initializes the API client library and sets up sign-in state
+       *  listeners.
+       */
+      function initClient() {
+        gapi.client.init({
+          apiKey: developerKey,
+          clientId: clientId,
+          discoveryDocs: DISCOVERY_DOCS,
+          scope: scope
+        }).then(function () {
+          // Listen for sign-in state changes.
+      //    gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+
+          // Handle the initial sign-in state.
+        // updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+          //authorizeButton.onclick = handleAuthClick;
+          //signoutButton.onclick = handleSignoutClick;
+        }, function(error) {
+          appendPre(JSON.stringify(error, null, 2));
+        });
+      }
+
+      //permiso publico
+      
+
+      // A simple callback implementation.
+      function pickerCallback(data) {
+        if (data.action == google.picker.Action.PICKED) {
+          var file = data.docs[0];
+          var fileId = file.id;
+          var folderId = file.parentId;
+          var thumbnails = file.iconUrl;
+          var url = file.url;
+          var name = file.name;
+          var cosa = file.get;
+          
+          //asignamos permisos
+          
+          gapi.client.drive.permissions.create({
+            "fileId": fileId,
+            "emailMessage": "luisarroyounesr@gmail.com",
+            "enforceSingleParent": true,
+            "moveToNewOwnersRoot": true,
+            "sendNotificationEmail": true,
+            "supportsAllDrives": true,
+            "supportsTeamDrives": true,
+            "transferOwnership": false,
+            "useDomainAdminAccess": false,
+            "resource": {
+              "role": "reader",
+              "type": "user",
+              "emailAddress": "luisarroyounesr@gmail.com"
+            }
+          }).then(function(response) {
+                // Handle the results here (response.result has the parsed body).
+                console.log("Response", response);
+              },
+              function(err) { console.error("Execute error", err); });
+
+          //mostramos lo demas
+          console.log("este es el id del archivo");
+          console.log(fileId);
+          console.log("esta es el id de la carpeta");
+          console.log(folderId);
+          console.log("esta es la thumbnails");
+          console.log(thumbnails);
+          console.log("esta es el archivo");
+          console.log(file);
+          
+          elemento = document.getElementById("elemento");
+          elemento.innerHTML = '<img src="'+thumbnails+'"><a href="'+url+'" target="_blank">'+name+'</a>';
+          
+        }
+      }
+    </script>
+  </head>
+  <body>
+
+    <div id="elemento" class="elemento">
+    </div>
+    <br>
+    
+    <button onclick="showPickerDialog()">Show Picker Dialog</button>
+
+
+    <!-- The Google API Loader script. -->
+    <script type="text/javascript" src="https://apis.google.com/js/api.js"></script>
+    <script>
+    function showPickerDialog(){
+        loadPicker()
+    }
+    </script>
+  </body>
+</html>
+
+
